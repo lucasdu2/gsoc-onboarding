@@ -53,22 +53,29 @@ object Main extends IOWebApp:
           div(
             h1("Typelevel GSoC Onboarding"),
             div(
-              cls <-- validated
-                .map {
-                  case None => "empty"
-                  case Some(Left(_)) => "error"
-                  case Some(Right(ValidationResponse(true, _))) => "valid"
-                  case Some(Right(ValidationResponse(false, _))) => "invalid"
-                }
-                .map(_ :: "validation-result" :: Nil),
-              validated.map(_.foldMap(_.fold(identity(_), _.toString)))
-            ),
-            button(
-              onClick --> (_.foreach(_ => validate)),
-              "Check order"
-            ),
-            nav,
-            routes.toResource.flatMap(router.dispatch)
+              cls := "container",
+              navTag(
+                div(
+                  cls <-- validated
+                    .map {
+                      case None => "empty"
+                      case Some(Left(_)) => "error"
+                      case Some(Right(ValidationResponse(true, _))) => "valid"
+                      case Some(Right(ValidationResponse(false, _))) => "invalid"
+                    }
+                    .map(_ :: "validation-result" :: Nil),
+                  validated.map(_.foldMap(_.fold(identity(_), _.toString)))
+                ),
+                button(
+                  onClick --> (_.foreach(_ => validate)),
+                  "Check order"
+                ),
+                nav
+              ),
+              mainTag(
+                routes.toResource.flatMap(router.dispatch)
+              )
+            )
           )
         }
     }
