@@ -12,19 +12,28 @@ import calico.syntax.*
 import org.scalajs.dom
 import scala.concurrent.duration.DurationInt
 
-private case class Planet(name: String, radius: Double, period: Double, color: String, symbol: String)
+private case class Planet(
+    name: String,
+    radius: Double,
+    period: Double,
+    color: String,
+    symbol: String)
 
-private case class TransferParams(semiMajor: Double, dv1: Double, dv2: Double, transferDays: Double)
+private case class TransferParams(
+    semiMajor: Double,
+    dv1: Double,
+    dv2: Double,
+    transferDays: Double)
 
 private case class SimState(
-                             originIdx: Int,
-                             destIdx: Int,
-                             progress: Double,
-                             active: Boolean,
-                             params: Option[TransferParams],
-                             zoom: Double,
-                             launchAngle: Double
-                           )
+    originIdx: Int,
+    destIdx: Int,
+    progress: Double,
+    active: Boolean,
+    params: Option[TransferParams],
+    zoom: Double,
+    launchAngle: Double
+)
 
 val abh80: Contributor = Contributor("abh80"):
 
@@ -70,8 +79,14 @@ val abh80: Contributor = Contributor("abh80"):
         else defaultAngle(pIdx)
 
   def ellipsePoint(
-                    phi: Double, a: Double, b: Double, c: Double, alpha: Double, scale: Double, center: Double
-                  ): (Double, Double) =
+      phi: Double,
+      a: Double,
+      b: Double,
+      c: Double,
+      alpha: Double,
+      scale: Double,
+      center: Double
+  ): (Double, Double) =
     val lx = a * math.cos(phi) - c
     val ly = b * math.sin(phi)
     val sx = lx * math.cos(alpha) - ly * math.sin(alpha)
@@ -87,7 +102,9 @@ val abh80: Contributor = Contributor("abh80"):
   def zoomForTransfer(r1AU: Double, r2AU: Double): Double =
     math.max(r1AU, r2AU) * 1.35
 
-  def renderSvg(s: SimState, stateRef: SignallingRef[IO, SimState]): Resource[IO, HtmlElement[IO]] =
+  def renderSvg(
+      s: SimState,
+      stateRef: SignallingRef[IO, SimState]): Resource[IO, HtmlElement[IO]] =
     val pxPerAU = (svgSize / 2.0 - 20) / s.zoom
     div(
       styleAttr := s"width:${svgSize}px;height:${svgSize}px;margin:8px auto;"
@@ -100,16 +117,22 @@ val abh80: Contributor = Contributor("abh80"):
           svg.setAttribute("viewBox", s"0 0 $svgSize $svgSize")
           svg.setAttribute("width", s"$svgSize")
           svg.setAttribute("height", s"$svgSize")
-          svg.setAttribute("style", "background:#0f172a;border-radius:8px;border:1px solid #1e293b;cursor:grab;")
+          svg.setAttribute(
+            "style",
+            "background:#0f172a;border-radius:8px;border:1px solid #1e293b;cursor:grab;")
 
-          svg.addEventListener("wheel", (evt: dom.Event) => {
-            evt.preventDefault()
-            val we = evt.asInstanceOf[dom.WheelEvent]
-            val factor = if we.deltaY > 0 then 1.15 else 1.0 / 1.15
-            stateRef
-              .update(st => st.copy(zoom = math.max(minZoom, math.min(maxZoom, st.zoom * factor))))
-              .unsafeRunAndForget()
-          })
+          svg.addEventListener(
+            "wheel",
+            (evt: dom.Event) => {
+              evt.preventDefault()
+              val we = evt.asInstanceOf[dom.WheelEvent]
+              val factor = if we.deltaY > 0 then 1.15 else 1.0 / 1.15
+              stateRef
+                .update(st =>
+                  st.copy(zoom = math.max(minZoom, math.min(maxZoom, st.zoom * factor))))
+                .unsafeRunAndForget()
+            }
+          )
 
           val zoomRatio = s.zoom / defaultZoom
           val dotR = math.max(2.0, math.min(5.0, 3.0 * zoomRatio))
@@ -169,7 +192,8 @@ val abh80: Contributor = Contributor("abh80"):
             val nSegs = 60
             val (phiStart, phiEnd) =
               if outward then (0.0, math.Pi) else (math.Pi, 2.0 * math.Pi)
-            val (dimStart, dimEnd) = if outward then (math.Pi, 2.0 * math.Pi) else (0.0, math.Pi)
+            val (dimStart, dimEnd) =
+              if outward then (math.Pi, 2.0 * math.Pi) else (0.0, math.Pi)
             val dimD = new StringBuilder("M ")
             for i <- 0 to nSegs do
 
@@ -273,21 +297,20 @@ val abh80: Contributor = Contributor("abh80"):
   SignallingRef[IO].of(initial).toResource.flatMap { state =>
 
     val loop: IO[Unit] =
-      fs2.Stream
+      fs2
+        .Stream
         .fixedRate[IO](50.millis)
         .evalMap(_ =>
           state.update { s =>
             if s.active && s.progress < 1.0 then s.copy(progress = s.progress + 0.005)
             else if s.active && s.progress >= 1.0 then s.copy(active = false, progress = 1.0)
             else s
-          }
-        )
+          })
         .compile
         .drain
 
     loop.background >> div(
       styleAttr := "font-family:'Segoe UI',system-ui,sans-serif;background:#0f172a;color:#e2e8f0;padding:20px;border-radius:12px;max-width:520px;border:1px solid #1e293b;box-shadow:0 8px 24px rgba(0,0,0,0.6);",
-
       p(
         styleAttr := "margin:0 0 2px 0;font-size:0.85em;color:#94a3b8;",
         "I am ",
@@ -303,7 +326,6 @@ val abh80: Contributor = Contributor("abh80"):
         "I have keen interest for astrophysics and decided to add a mini simulation of minimum-energy transfers between planets using real orbital data. ",
         "Select origin & destination, hit Launch, and watch the spacecraft follow the computed Hohmann ellipse. You may also use zoom using scroll wheel/pinch on trackpads."
       ),
-
       div(
         styleAttr := "display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap;",
         span(styleAttr := "font-size:0.8em;color:#94a3b8;", "From:"),
@@ -340,31 +362,44 @@ val abh80: Contributor = Contributor("abh80"):
               val tp = computeTransfer(origin.radius, dest.radius)
               val autoZoom = zoomForTransfer(origin.radius, dest.radius)
               val angle = defaultAngle(s.originIdx)
-              s.copy(params = Some(tp), active = true, progress = 0.0, zoom = autoZoom, launchAngle = angle)
+              s.copy(
+                params = Some(tp),
+                active = true,
+                progress = 0.0,
+                zoom = autoZoom,
+                launchAngle = angle)
             }
           }),
           "Launch"
         ),
         button(
           styleAttr := "padding:5px 10px;border-radius:6px;border:1px solid #334155;cursor:pointer;font-size:0.78em;background:#1e293b;color:#94a3b8;",
-          onClick --> (_.foreach { _ =>
-            state.update(s => s.copy(zoom = defaultZoom))
-          }),
+          onClick --> (_.foreach { _ => state.update(s => s.copy(zoom = defaultZoom)) }),
           "Reset Zoom"
         )
       ),
-
       state.map(s => renderSvg(s, state)),
-
       state.map { s =>
         s.params match
           case Some(tp) =>
             div(
               styleAttr := "margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:0.82em;padding:10px;background:#1e293b;border-radius:8px;border:1px solid #334155;",
-              div(span(styleAttr := "color:#94a3b8;", "Δv₁: "), span(styleAttr := "color:#60a5fa;font-weight:600;", s"${fmt(tp.dv1)} km/s")),
-              div(span(styleAttr := "color:#94a3b8;", "Δv₂: "), span(styleAttr := "color:#60a5fa;font-weight:600;", s"${fmt(tp.dv2)} km/s")),
-              div(span(styleAttr := "color:#94a3b8;", "Total Δv: "), span(styleAttr := "color:#f59e0b;font-weight:600;", s"${fmt(tp.dv1 + tp.dv2)} km/s")),
-              div(span(styleAttr := "color:#94a3b8;", "Transfer: "), span(styleAttr := "color:#e2e8f0;font-weight:600;", s"${fmt(tp.transferDays)} days")),
+              div(
+                span(styleAttr := "color:#94a3b8;", "Δv₁: "),
+                span(styleAttr := "color:#60a5fa;font-weight:600;", s"${fmt(tp.dv1)} km/s")),
+              div(
+                span(styleAttr := "color:#94a3b8;", "Δv₂: "),
+                span(styleAttr := "color:#60a5fa;font-weight:600;", s"${fmt(tp.dv2)} km/s")),
+              div(
+                span(styleAttr := "color:#94a3b8;", "Total Δv: "),
+                span(
+                  styleAttr := "color:#f59e0b;font-weight:600;",
+                  s"${fmt(tp.dv1 + tp.dv2)} km/s")),
+              div(
+                span(styleAttr := "color:#94a3b8;", "Transfer: "),
+                span(
+                  styleAttr := "color:#e2e8f0;font-weight:600;",
+                  s"${fmt(tp.transferDays)} days")),
               div(
                 styleAttr := "grid-column:span 2;",
                 span(styleAttr := "color:#94a3b8;", "Semi-major axis: "),
